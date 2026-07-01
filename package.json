@@ -46,7 +46,7 @@
     "functype-log": "^1.5.0",
     "loglayer": "^9.3.0",
     "pino": "^10.3.1",
-    "somamcp": "^1.0.15",
+    "somamcp": "^1.1.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
