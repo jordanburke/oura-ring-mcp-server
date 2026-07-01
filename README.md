@@ -1,120 +1,113 @@
-# ts-builds-template
+# oura-ring-mcp-server
 
-[![Node.js CI](https://github.com/jordanburke/ts-builds-template/actions/workflows/node.js.yml/badge.svg)](https://github.com/jordanburke/ts-builds-template/actions/workflows/node.js.yml)
-[![npm version](https://img.shields.io/npm/v/ts-builds-template.svg)](https://www.npmjs.com/package/ts-builds-template)
-[![npm downloads](https://img.shields.io/npm/dm/ts-builds-template.svg)](https://www.npmjs.com/package/ts-builds-template)
-[![GitHub stars](https://img.shields.io/github/stars/jordanburke/ts-builds-template.svg?style=flat&logo=github)](https://github.com/jordanburke/ts-builds-template/stargazers)
+[![Node.js CI](https://github.com/jordanburke/oura-ring-mcp-server/actions/workflows/node.js.yml/badge.svg)](https://github.com/jordanburke/oura-ring-mcp-server/actions/workflows/node.js.yml)
+[![npm version](https://img.shields.io/npm/v/oura-ring-mcp-server.svg)](https://www.npmjs.com/package/oura-ring-mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-A modern TypeScript library template with standardized build scripts and tooling.
+A [Model Context Protocol](https://modelcontextprotocol.io) server for the
+[Oura Ring API v2](https://cloud.ouraring.com/v2/docs). Point Claude (or any MCP client)
+at your Oura data and ask about your sleep, readiness, activity, heart rate, workouts, and more.
 
-## Features
+Built with [`somamcp`](https://github.com/sapientsai/SomaMCP) (telemetry + introspection),
+[`functype`](https://functype.org) (typed error handling), and `zod`.
 
-- **Modern Build System**: [ts-builds](https://github.com/jordanburke/ts-builds) + [tsdown](https://tsdown.dev/) for fast bundling
-- **Testing**: [Vitest](https://vitest.dev/) with coverage reporting
-- **Code Quality**: ESLint + Prettier with automatic formatting and fixing
-- **ESM Output**: ES module output with proper TypeScript declarations
-- **Standardized Scripts**: Consistent commands via ts-builds across all projects
+## Design
+
+Rather than one tool per endpoint, the server exposes a **single consolidated `oura_data` tool**
+with a `collection` parameter. This keeps the tool schema small (low token cost) while covering
+every Oura `usercollection` endpoint. The tool validates that the parameters you pass are legal
+for the chosen collection and returns actionable messages when they are not.
 
 ## Requirements
 
-- **Node.js 24+** (pinned in `.nvmrc`; npm 11.5.1+ also fixes OIDC trusted publishing)
-- **pnpm 11+** (pinned via the `packageManager` field — run `corepack enable` to use the exact version)
+- **Node.js 24+** (pinned in `.nvmrc`)
+- An Oura **personal access token** — create one at
+  [cloud.ouraring.com/personal-access-tokens](https://cloud.ouraring.com/personal-access-tokens)
 
-## Quick Start
+## Usage
 
-1. **Use this template** to create a new repository
-2. **Clone your new repository**
-3. **Install dependencies**: `pnpm install`
-4. **Start developing**: `pnpm dev` (builds with watch mode)
-5. **Before committing**: `pnpm validate` (format + lint + test + build)
+### Claude Desktop / Claude Code
 
-## Development Commands
+Add to your MCP client config (e.g. `claude_desktop_config.json`):
 
-### Pre-Checkin Command
+```json
+{
+  "mcpServers": {
+    "oura": {
+      "command": "npx",
+      "args": ["-y", "oura-ring-mcp-server"],
+      "env": {
+        "OURA_API_KEY": "your-personal-access-token"
+      }
+    }
+  }
+}
+```
+
+That runs the server over stdio, which is what most MCP clients expect.
+
+### Configuration
+
+| Env var                  | Required | Default   | Description                                                                 |
+| ------------------------ | -------- | --------- | --------------------------------------------------------------------------- |
+| `OURA_API_KEY`           | yes      | —         | Oura personal access token, sent as a Bearer token.                         |
+| `OURA_SANDBOX`           | no       | `false`   | Use Oura's `/sandbox/` demo data instead of your real data.                 |
+| `TRANSPORT_TYPE`         | no       | `stdio`   | `stdio` or `httpStream`.                                                    |
+| `PORT`                   | no       | `3000`    | Port for `httpStream` transport.                                            |
+| `HOST`                   | no       | `0.0.0.0` | Host for `httpStream` transport.                                            |
+| `OURA_TELEMETRY_FILE`    | no       | —         | Write NDJSON telemetry events to this file path (safe under any transport). |
+| `OURA_TELEMETRY_CONSOLE` | no       | `true`    | Console telemetry, `httpStream` only (never enabled under stdio).           |
+
+### HTTP transport
+
+For a long-running / networked deployment:
 
 ```bash
-pnpm validate  # Main command: format, lint, test, and build everything
+OURA_API_KEY=... TRANSPORT_TYPE=httpStream PORT=3000 npx -y oura-ring-mcp-server
 ```
 
-### Individual Commands
+The MCP endpoint is served at `/mcp`; `somamcp` also exposes a public `GET /health` probe.
+
+## The `oura_data` tool
+
+| Parameter                         | Applies to                        | Notes                                       |
+| --------------------------------- | --------------------------------- | ------------------------------------------- |
+| `collection`                      | all                               | Which data collection to fetch (see below). |
+| `start_date` / `end_date`         | daily collections                 | `YYYY-MM-DD`. Omitted → last 7 days.        |
+| `start_datetime` / `end_datetime` | `heartrate`, `ring_battery_level` | ISO-8601. Omitted → last 24 hours.          |
+| `latest`                          | `heartrate`, `ring_battery_level` | Return only the most recent sample.         |
+| `document_id`                     | collections with a detail route   | Fetch a single record by id.                |
+| `next_token`                      | list collections                  | Pagination cursor from a previous response. |
+| `fields`                          | list collections                  | Comma-separated sparse fieldset.            |
+
+### Collections
+
+**Daily** (`start_date`/`end_date`): `daily_activity`, `daily_sleep`, `daily_readiness`,
+`daily_spo2`, `daily_stress`, `daily_resilience`, `daily_cardiovascular_age`, `vO2_max`,
+`sleep`, `sleep_time`, `session`, `workout`, `tag`, `enhanced_tag`, `rest_mode_period`
+
+**Time-series** (`start_datetime`/`end_datetime`): `heartrate`, `ring_battery_level`
+
+**List / singleton**: `ring_configuration`, `personal_info`
+
+### Example prompts
+
+- "What was my average readiness score last week?"
+- "Show my sleep stages for the night of 2026-06-20."
+- "Get my most recent heart rate reading."
+- "How many workouts did I log this month and how long were they?"
+
+## Development
 
 ```bash
-# Formatting
-pnpm format        # Format code with Prettier
-pnpm format:check  # Check formatting without writing
-
-# Linting
-pnpm lint          # Fix ESLint issues
-pnpm lint:check    # Check ESLint issues without fixing
-
-# Testing
-pnpm test          # Run tests once
-pnpm test:watch    # Run tests in watch mode
-pnpm test:coverage # Run tests with coverage report
-
-# Building
-pnpm build         # Production build
-pnpm dev           # Development mode with watch
-
-# Type Checking
-pnpm typecheck     # Check TypeScript types
+pnpm install
+pnpm validate   # format + lint + typecheck + test + build
+pnpm dev        # watch build
+pnpm inspect    # run against the MCP Inspector
 ```
 
-## Publishing
+Try it without a ring by setting `OURA_SANDBOX=true` to hit Oura's demo dataset.
 
-The template automatically runs `pnpm validate` before publishing via the `prepublishOnly` script.
+## License
 
-```bash
-npm version patch|minor|major
-npm publish --access public
-```
-
-## Project Structure
-
-```
-src/
-├── index.ts          # Main library entry point
-test/
-├── *.spec.ts         # Test files
-dist/                 # Built output (ES module + types)
-```
-
-## Tooling
-
-- **Build**: [ts-builds](https://github.com/jordanburke/ts-builds) - Centralized TypeScript toolchain
-- **Bundler**: [tsdown](https://tsdown.dev/) - Fast TypeScript bundler (successor to tsup)
-- **Test**: [Vitest](https://vitest.dev/) - Fast unit test framework
-- **Lint**: [ESLint](https://eslint.org/) with TypeScript support
-- **Format**: [Prettier](https://prettier.io/) with ESLint integration
-- **Package Manager**: [pnpm](https://pnpm.io/) for fast, efficient installs
-
-## Claude Code Skill
-
-This repository includes a Claude Code skill for bootstrapping new TypeScript libraries from this template:
-
-**Location**: `.claude/skills/ts-builds-template/`
-
-**Usage**: When using Claude Code, the skill provides guidance for:
-
-- Cloning and customizing this template for a new library
-- Understanding the project structure and dev workflow
-- Publishing to npm
-
-**Installation** (for use in other projects):
-
-```bash
-# Copy the skill to your Claude Code skills directory
-cp -r .claude/skills/ts-builds-template ~/.claude/skills/
-```
-
-**Related Skills**: For tooling configuration, migration guides, and standardizing existing projects, see the [ts-builds](https://github.com/jordanburke/ts-builds) skill.
-
-**References**:
-
-- [CLAUDE.md](./CLAUDE.md) - Development guidance for this project
-- [.claude/skills/ts-builds-template/](./.claude/skills/ts-builds-template/) - Complete skill documentation
-
----
-
-_This template is based on the earlier work of https://github.com/orabazu/tsup-library-template but updated with modern tooling and standardized scripts._
+MIT

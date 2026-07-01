@@ -1,19 +1,27 @@
 {
-  "name": "ts-builds-template",
-  "version": "1.0.0",
-  "description": "A basic template for creating a TypeScript Builds and Publishing it to NPM.",
+  "name": "oura-ring-mcp-server",
+  "version": "0.1.0",
+  "description": "A Model Context Protocol (MCP) server for the Oura Ring API v2 - query sleep, readiness, activity, heart rate, and more from your Oura data.",
   "keywords": [
-    "typescript",
-    "template",
-    "tsdown",
-    "npm"
+    "oura",
+    "oura-ring",
+    "mcp",
+    "model-context-protocol",
+    "somamcp",
+    "health",
+    "sleep",
+    "readiness",
+    "hrv"
   ],
   "author": "jordan.burke@gmail.com",
   "license": "MIT",
-  "homepage": "https://github.com/jordanburke/ts-builds-template",
+  "homepage": "https://github.com/jordanburke/oura-ring-mcp-server",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jordanburke/ts-builds-template"
+    "url": "https://github.com/jordanburke/oura-ring-mcp-server"
+  },
+  "bin": {
+    "oura-ring-mcp-server": "./dist/index.js"
   },
   "scripts": {
     "validate": "ts-builds validate",
@@ -27,7 +35,19 @@
     "test:coverage": "ts-builds test:coverage",
     "build": "ts-builds build",
     "dev": "ts-builds dev",
+    "start": "node dist/index.js",
+    "inspect": "npx @modelcontextprotocol/inspector node dist/index.js",
     "prepublishOnly": "pnpm validate"
+  },
+  "dependencies": {
+    "@loglayer/transport-pino": "^3.2.0",
+    "dotenv": "^17.4.2",
+    "functype": "^1.5.0",
+    "functype-log": "^1.5.0",
+    "loglayer": "^9.3.0",
+    "pino": "^10.3.1",
+    "somamcp": "^1.0.15",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",

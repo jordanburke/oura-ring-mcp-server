@@ -11,3 +11,6 @@ publicHoistPattern:
 # Allow our freshly-published toolchain past the global minimumReleaseAge cooldown
 minimumReleaseAgeExclude:
   - ts-builds@3.0.1
+
+allowBuilds:
+  tldjs: false
