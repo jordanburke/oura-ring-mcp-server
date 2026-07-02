@@ -1,0 +1,71 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.jordanburke/oura-ring-mcp-server",
+  "description": "Oura Ring MCP server: query sleep, readiness, activity, heart rate, workouts, and more from the Oura API v2.",
+  "repository": {
+    "url": "https://github.com/jordanburke/oura-ring-mcp-server",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "oura-ring-mcp-server",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "OURA_API_KEY",
+          "description": "Oura personal access token (create at https://cloud.ouraring.com/personal-access-tokens)",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "OURA_SANDBOX",
+          "description": "Use Oura's /sandbox/ demo data instead of real data (true/false, default false)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "TRANSPORT_TYPE",
+          "description": "Transport: 'stdio' (default) or 'httpStream' for remote/Docker deployments",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "PORT",
+          "description": "HTTP port for httpStream transport (default 3000)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "HOST",
+          "description": "HTTP host for httpStream transport (default 0.0.0.0)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "OURA_TELEMETRY_FILE",
+          "description": "Write NDJSON telemetry events to this file path (safe under any transport)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "OURA_TELEMETRY_CONSOLE",
+          "description": "Console telemetry under httpStream transport: true (default) or false",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}
