@@ -1,14 +1,22 @@
 #!/usr/bin/env node
 import "dotenv/config"
 
+import { readFileSync } from "node:fs"
+
 import { createServer } from "somamcp"
 
 import { parseConfig } from "./config"
 import { buildTelemetry } from "./telemetry"
 import { createOuraDataTool } from "./tools/ouraData"
 
-const NAME = "oura-ring-mcp-server"
-const VERSION = "0.1.0"
+// Single source of truth for identity: package.json sits at the package root in every
+// layout we ship (npm install and the .mcpb bundle both keep it one level above dist/).
+const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
+  name: string
+  version: `${number}.${number}.${number}`
+}
+const NAME = pkg.name
+const VERSION = pkg.version
 
 const stderr = (message: string): void => {
   process.stderr.write(`[${NAME}] ${message}\n`)

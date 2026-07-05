@@ -30,11 +30,14 @@ run("pnpm", ["build"])
 rmSync(join(root, "build"), { recursive: true, force: true })
 mkdirSync(stage, { recursive: true })
 
-// 3. Copy compiled output + manifest
+// 3. Copy compiled output + docs, then stamp the manifest version from package.json
 cpSync(join(root, "dist"), join(stage, "dist"), { recursive: true })
-cpSync(join(root, "manifest.json"), join(stage, "manifest.json"))
 cpSync(join(root, "README.md"), join(stage, "README.md"))
 cpSync(join(root, "LICENSE"), join(stage, "LICENSE"))
+
+const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"))
+manifest.version = pkg.version // package.json is the single source of truth
+writeFileSync(join(stage, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n")
 
 // 4. Minimal ESM package.json so Node resolves dist/ as ESM and npm installs prod deps only
 const stagePkg = {
