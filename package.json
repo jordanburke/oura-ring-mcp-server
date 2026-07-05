@@ -36,6 +36,7 @@
     "test:coverage": "ts-builds test:coverage",
     "build": "ts-builds build",
     "build:mcpb": "node scripts/build-mcpb.mjs",
+    "stamp:server": "node scripts/stamp-server-json.mjs",
     "dev": "ts-builds dev",
     "start": "node dist/index.js",
     "inspect": "npx @modelcontextprotocol/inspector node dist/index.js",
