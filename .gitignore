@@ -34,6 +34,10 @@ node_modules/
 # Output of 'npm pack'
 *.tgz
 
+# mcpb bundle staging + artifacts
+build/
+*.mcpb
+
 # dotenv environment variable files
 .env
 .env.*.local

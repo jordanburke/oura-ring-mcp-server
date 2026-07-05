@@ -40,10 +40,14 @@ jobs:
       - name: Publish to npm
         run: npm publish --provenance --access public
 
+      - name: Build MCPB bundle
+        run: pnpm build:mcpb
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: true
+          files: build/*.mcpb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

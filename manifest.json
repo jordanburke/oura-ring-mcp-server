@@ -1,0 +1,61 @@
+{
+  "manifest_version": "0.3",
+  "name": "oura-ring-mcp-server",
+  "display_name": "Oura Ring",
+  "version": "0.1.2",
+  "description": "Query your Oura Ring data — sleep, readiness, activity, heart rate, workouts, and more — via the Oura API v2.",
+  "long_description": "A Model Context Protocol server for the Oura Ring API v2. Exposes a single consolidated `oura_data` tool covering every Oura `usercollection` endpoint, so you can ask about sleep, readiness, activity, heart rate, stress, workouts, and more from your own Oura data. Read-only; authenticates with a personal access token.",
+  "author": {
+    "name": "Jordan Burke",
+    "email": "jordan.burke@gmail.com",
+    "url": "https://github.com/jordanburke"
+  },
+  "homepage": "https://github.com/jordanburke/oura-ring-mcp-server",
+  "documentation": "https://github.com/jordanburke/oura-ring-mcp-server#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jordanburke/oura-ring-mcp-server"
+  },
+  "license": "MIT",
+  "keywords": ["oura", "oura-ring", "health", "sleep", "readiness", "hrv", "mcp"],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"],
+      "env": {
+        "OURA_API_KEY": "${user_config.oura_api_key}",
+        "OURA_SANDBOX": "${user_config.sandbox}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "oura_data",
+      "description": "Fetch data from any Oura API v2 usercollection endpoint (sleep, readiness, activity, heart rate, workouts, and more)."
+    }
+  ],
+  "user_config": {
+    "oura_api_key": {
+      "type": "string",
+      "title": "Oura Personal Access Token",
+      "description": "Create one at https://cloud.ouraring.com/personal-access-tokens",
+      "sensitive": true,
+      "required": true
+    },
+    "sandbox": {
+      "type": "boolean",
+      "title": "Use Oura sandbox (demo) data",
+      "description": "Query Oura's sandbox demo dataset instead of your real ring data — useful for trying the server out without a physical ring.",
+      "default": false,
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}
