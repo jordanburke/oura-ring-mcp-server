@@ -1,6 +1,6 @@
 {
   "name": "oura-ring-mcp-server",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "A Model Context Protocol (MCP) server for the Oura Ring API v2 - query sleep, readiness, activity, heart rate, and more from your Oura data.",
   "mcpName": "io.github.jordanburke/oura-ring-mcp-server",
   "keywords": [
