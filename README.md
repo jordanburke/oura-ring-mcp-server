@@ -74,20 +74,20 @@ That runs the server over stdio, which is what most MCP clients expect. Run `log
 
 ### Configuration
 
-| Env var                  | Required        | Default                             | Description                                                                 |
-| ------------------------ | --------------- | ----------------------------------- | --------------------------------------------------------------------------- |
-| `OURA_CLIENT_ID`         | for OAuth       | —                                   | Oura OAuth2 client ID.                                                       |
-| `OURA_CLIENT_SECRET`     | for OAuth       | —                                   | Oura OAuth2 client secret.                                                   |
-| `OURA_API_KEY`           | for legacy PAT  | —                                   | Legacy personal access token (Bearer). Alternative to the OAuth pair.       |
-| `OURA_REDIRECT_URI`      | no              | `http://localhost:8080/callback`    | Redirect URI for `login`; must match the Oura app registration.             |
-| `OURA_SCOPES`            | no              | `daily heartrate personal`          | Space-separated scopes requested during `login`.                            |
-| `OURA_TOKEN_STORE`       | no              | `~/.config/oura-ring-mcp/tokens.json` | Path to the OAuth token store.                                            |
-| `OURA_SANDBOX`           | no              | `false`                             | Use Oura's `/sandbox/` demo data instead of your real data.                 |
-| `TRANSPORT_TYPE`         | no              | `stdio`                             | `stdio` or `httpStream`.                                                    |
-| `PORT`                   | no              | `3000`                              | Port for `httpStream` transport.                                            |
-| `HOST`                   | no              | `0.0.0.0`                           | Host for `httpStream` transport.                                            |
-| `OURA_TELEMETRY_FILE`    | no              | —                                   | Write NDJSON telemetry events to this file path (safe under any transport). |
-| `OURA_TELEMETRY_CONSOLE` | no              | `true`                              | Console telemetry, `httpStream` only (never enabled under stdio).           |
+| Env var                  | Required       | Default                               | Description                                                                 |
+| ------------------------ | -------------- | ------------------------------------- | --------------------------------------------------------------------------- |
+| `OURA_CLIENT_ID`         | for OAuth      | —                                     | Oura OAuth2 client ID.                                                      |
+| `OURA_CLIENT_SECRET`     | for OAuth      | —                                     | Oura OAuth2 client secret.                                                  |
+| `OURA_API_KEY`           | for legacy PAT | —                                     | Legacy personal access token (Bearer). Alternative to the OAuth pair.       |
+| `OURA_REDIRECT_URI`      | no             | `http://localhost:8080/callback`      | Redirect URI for `login`; must match the Oura app registration.             |
+| `OURA_SCOPES`            | no             | `daily heartrate personal`            | Space-separated scopes requested during `login`.                            |
+| `OURA_TOKEN_STORE`       | no             | `~/.config/oura-ring-mcp/tokens.json` | Path to the OAuth token store.                                              |
+| `OURA_SANDBOX`           | no             | `false`                               | Use Oura's `/sandbox/` demo data instead of your real data.                 |
+| `TRANSPORT_TYPE`         | no             | `stdio`                               | `stdio` or `httpStream`.                                                    |
+| `PORT`                   | no             | `3000`                                | Port for `httpStream` transport.                                            |
+| `HOST`                   | no             | `0.0.0.0`                             | Host for `httpStream` transport.                                            |
+| `OURA_TELEMETRY_FILE`    | no             | —                                     | Write NDJSON telemetry events to this file path (safe under any transport). |
+| `OURA_TELEMETRY_CONSOLE` | no             | `true`                                | Console telemetry, `httpStream` only (never enabled under stdio).           |
 
 ### HTTP transport
 
