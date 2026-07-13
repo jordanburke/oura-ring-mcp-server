@@ -23,8 +23,11 @@ for the chosen collection and returns actionable messages when they are not.
 - **Node.js 24+** (pinned in `.nvmrc`)
 - An Oura **OAuth2 application** — register one at
   [cloud.ouraring.com/oauth/applications](https://cloud.ouraring.com/oauth/applications) to get a
-  client ID and secret. Set the redirect URI to `http://localhost:8080/callback` and request the
-  `daily heartrate personal` scopes.
+  client ID and secret. Set the redirect URI to `http://localhost:8080/callback` and enable the
+  read scopes you want. The default requests the full set —
+  `email personal daily heartrate tag workout session spo2 ring_configuration stress heart_health` —
+  so every collection works (`heart_health` in particular gates `vO2_max` and
+  `daily_cardiovascular_age`).
 
   > Oura stopped issuing new **personal access tokens** in December 2025, so OAuth2 is the path for
   > new setups. A previously-issued PAT still works — see [Authentication](#authentication).
@@ -80,7 +83,7 @@ That runs the server over stdio, which is what most MCP clients expect. Run `log
 | `OURA_CLIENT_SECRET`     | for OAuth      | —                                     | Oura OAuth2 client secret.                                                  |
 | `OURA_API_KEY`           | for legacy PAT | —                                     | Legacy personal access token (Bearer). Alternative to the OAuth pair.       |
 | `OURA_REDIRECT_URI`      | no             | `http://localhost:8080/callback`      | Redirect URI for `login`; must match the Oura app registration.             |
-| `OURA_SCOPES`            | no             | `daily heartrate personal`            | Space-separated scopes requested during `login`.                            |
+| `OURA_SCOPES`            | no             | _full read set (see Requirements)_    | Space-separated scopes requested during `login`.                            |
 | `OURA_TOKEN_STORE`       | no             | `~/.config/oura-ring-mcp/tokens.json` | Path to the OAuth token store.                                              |
 | `OURA_SANDBOX`           | no             | `false`                               | Use Oura's `/sandbox/` demo data instead of your real data.                 |
 | `TRANSPORT_TYPE`         | no             | `stdio`                               | `stdio` or `httpStream`.                                                    |

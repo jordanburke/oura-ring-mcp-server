@@ -63,6 +63,29 @@ describe("createOAuthTokenProvider", () => {
     }
   })
 
+  it("re-reads the store on a later call when it was empty at startup (post-boot login)", async () => {
+    let contents: string | undefined
+    const readStore = vi.fn(async () => contents)
+    const writeStore = vi.fn(async (_p: string, next: string) => {
+      contents = next
+    })
+    const fetchFn = vi.fn().mockResolvedValue(tokenResponse())
+    const provider = createOAuthTokenProvider(auth, deps({ readStore, writeStore, fetchFn }))
+
+    // Server started with no store → first call errors (asks the user to log in).
+    const first = await provider.getToken()
+    expect(first.isLeft()).toBe(true)
+
+    // `login` runs out of band and writes a valid token store.
+    contents = JSON.stringify({ accessToken: "logged-in", refreshToken: "r", expiresAt: 5_000_000 })
+
+    // Next call must pick it up without a restart — and without needing a refresh.
+    const second = await provider.getToken()
+    expect(second.isRight()).toBe(true)
+    if (second.isRight()) expect(second.value).toBe("logged-in")
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
+
   it("refreshes using the stored refresh token when the access token is expired", async () => {
     const store = expiredStore()
     const fetchFn = vi.fn().mockResolvedValue(tokenResponse())

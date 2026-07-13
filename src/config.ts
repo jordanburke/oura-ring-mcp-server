@@ -45,7 +45,10 @@ const SANDBOX_BASE = "https://api.ouraring.com/v2/sandbox/usercollection"
 const DEFAULT_TOKEN_URL = "https://api.ouraring.com/oauth/token"
 const DEFAULT_AUTHORIZE_URL = "https://cloud.ouraring.com/oauth/authorize"
 const DEFAULT_REDIRECT_URI = "http://localhost:8080/callback"
-const DEFAULT_SCOPES = "daily heartrate personal"
+// Full read set so every collection the tool exposes works. Notably `heart_health` (vO2_max,
+// daily_cardiovascular_age), `stress`, `spo2`, `workout`, `session`, `tag`, `ring_configuration`
+// each gate their own endpoints; Oura 401s ("not authorized ... scope") without them.
+const DEFAULT_SCOPES = "email personal daily heartrate tag workout session spo2 ring_configuration stress heart_health"
 
 const isTruthy = (value: string | undefined): boolean =>
   value !== undefined && ["1", "true", "yes", "on"].includes(value.trim().toLowerCase())

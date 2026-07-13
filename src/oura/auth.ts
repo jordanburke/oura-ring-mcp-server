@@ -183,18 +183,19 @@ export const createOAuthTokenProvider = (auth: OAuthAuth, deps: AuthDeps = {}): 
   const writeStore = deps.writeStore ?? defaultWriteStore
 
   let cached: TokenSet | undefined
-  let loaded = false
   let inflight: Promise<Either<OuraError, string>> | undefined
 
+  // Load the store only while we have no token set in memory. This means a `login` that happens
+  // AFTER the server started (store empty at boot) is picked up on the next call — no restart. Once
+  // we hold a token set, we keep it and let expiry drive refreshes rather than re-reading each call.
   const ensureLoaded = async (): Promise<void> => {
-    if (loaded) return
+    if (cached) return
     const raw = await tryCatchAsync<OuraError, string | undefined>(
       () => readStore(auth.tokenStorePath),
       (e) => ({ kind: "auth", message: `Failed to read token store ${auth.tokenStorePath}: ${errMessage(e)}` }),
     )
-    // A read failure is non-fatal: fall back to the env seed rather than refusing to start.
-    cached = raw.isRight() && raw.value ? parseStore(raw.value) : undefined
-    loaded = true
+    // A read failure is non-fatal: leave `cached` unset so doRefresh reports the login prompt.
+    if (raw.isRight() && raw.value) cached = parseStore(raw.value)
   }
 
   const doRefresh = async (): Promise<Either<OuraError, string>> => {

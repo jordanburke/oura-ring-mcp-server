@@ -44,7 +44,7 @@ describe("parseConfig", () => {
         tokenUrl: "https://api.ouraring.com/oauth/token",
         authorizeUrl: "https://cloud.ouraring.com/oauth/authorize",
         redirectUri: "http://localhost:8080/callback",
-        scopes: "daily heartrate personal",
+        scopes: "email personal daily heartrate tag workout session spo2 ring_configuration stress heart_health",
         tokenStorePath: "/home/u/.config/oura-ring-mcp/tokens.json",
       })
     }
