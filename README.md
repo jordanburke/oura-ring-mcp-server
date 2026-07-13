@@ -21,8 +21,32 @@ for the chosen collection and returns actionable messages when they are not.
 ## Requirements
 
 - **Node.js 24+** (pinned in `.nvmrc`)
-- An Oura **personal access token** — create one at
-  [cloud.ouraring.com/personal-access-tokens](https://cloud.ouraring.com/personal-access-tokens)
+- An Oura **OAuth2 application** — register one at
+  [cloud.ouraring.com/oauth/applications](https://cloud.ouraring.com/oauth/applications) to get a
+  client ID and secret. Set the redirect URI to `http://localhost:8080/callback` and request the
+  `daily heartrate personal` scopes.
+
+  > Oura stopped issuing new **personal access tokens** in December 2025, so OAuth2 is the path for
+  > new setups. A previously-issued PAT still works — see [Authentication](#authentication).
+
+## Authentication
+
+The server authenticates to Oura with an OAuth2 access token that it refreshes automatically. You
+authorize once with the built-in `login` command:
+
+```bash
+# with OURA_CLIENT_ID and OURA_CLIENT_SECRET set in the environment
+npx -y oura-ring-mcp-server login
+```
+
+This opens your browser for consent, captures the redirect on `http://localhost:8080/callback`, and
+writes the tokens to `~/.config/oura-ring-mcp/tokens.json` (override with `OURA_TOKEN_STORE`). Oura
+refresh tokens are single-use, so the server owns and rotates them in that store from then on — you
+never put a refresh token in your environment. The MCP server reads the store on startup; re-run
+`login` only if the refresh token is ever revoked.
+
+**Legacy PAT:** if you still have a valid personal access token, set `OURA_API_KEY` instead and skip
+the OAuth setup. When both are configured, OAuth takes precedence.
 
 ## Usage
 
@@ -37,33 +61,40 @@ Add to your MCP client config (e.g. `claude_desktop_config.json`):
       "command": "npx",
       "args": ["-y", "oura-ring-mcp-server"],
       "env": {
-        "OURA_API_KEY": "your-personal-access-token"
+        "OURA_CLIENT_ID": "your-oauth-client-id",
+        "OURA_CLIENT_SECRET": "your-oauth-client-secret"
       }
     }
   }
 }
 ```
 
-That runs the server over stdio, which is what most MCP clients expect.
+That runs the server over stdio, which is what most MCP clients expect. Run `login` once first (see
+[Authentication](#authentication)) so the token store exists.
 
 ### Configuration
 
-| Env var                  | Required | Default   | Description                                                                 |
-| ------------------------ | -------- | --------- | --------------------------------------------------------------------------- |
-| `OURA_API_KEY`           | yes      | —         | Oura personal access token, sent as a Bearer token.                         |
-| `OURA_SANDBOX`           | no       | `false`   | Use Oura's `/sandbox/` demo data instead of your real data.                 |
-| `TRANSPORT_TYPE`         | no       | `stdio`   | `stdio` or `httpStream`.                                                    |
-| `PORT`                   | no       | `3000`    | Port for `httpStream` transport.                                            |
-| `HOST`                   | no       | `0.0.0.0` | Host for `httpStream` transport.                                            |
-| `OURA_TELEMETRY_FILE`    | no       | —         | Write NDJSON telemetry events to this file path (safe under any transport). |
-| `OURA_TELEMETRY_CONSOLE` | no       | `true`    | Console telemetry, `httpStream` only (never enabled under stdio).           |
+| Env var                  | Required        | Default                             | Description                                                                 |
+| ------------------------ | --------------- | ----------------------------------- | --------------------------------------------------------------------------- |
+| `OURA_CLIENT_ID`         | for OAuth       | —                                   | Oura OAuth2 client ID.                                                       |
+| `OURA_CLIENT_SECRET`     | for OAuth       | —                                   | Oura OAuth2 client secret.                                                   |
+| `OURA_API_KEY`           | for legacy PAT  | —                                   | Legacy personal access token (Bearer). Alternative to the OAuth pair.       |
+| `OURA_REDIRECT_URI`      | no              | `http://localhost:8080/callback`    | Redirect URI for `login`; must match the Oura app registration.             |
+| `OURA_SCOPES`            | no              | `daily heartrate personal`          | Space-separated scopes requested during `login`.                            |
+| `OURA_TOKEN_STORE`       | no              | `~/.config/oura-ring-mcp/tokens.json` | Path to the OAuth token store.                                            |
+| `OURA_SANDBOX`           | no              | `false`                             | Use Oura's `/sandbox/` demo data instead of your real data.                 |
+| `TRANSPORT_TYPE`         | no              | `stdio`                             | `stdio` or `httpStream`.                                                    |
+| `PORT`                   | no              | `3000`                              | Port for `httpStream` transport.                                            |
+| `HOST`                   | no              | `0.0.0.0`                           | Host for `httpStream` transport.                                            |
+| `OURA_TELEMETRY_FILE`    | no              | —                                   | Write NDJSON telemetry events to this file path (safe under any transport). |
+| `OURA_TELEMETRY_CONSOLE` | no              | `true`                              | Console telemetry, `httpStream` only (never enabled under stdio).           |
 
 ### HTTP transport
 
 For a long-running / networked deployment:
 
 ```bash
-OURA_API_KEY=... TRANSPORT_TYPE=httpStream PORT=3000 npx -y oura-ring-mcp-server
+OURA_CLIENT_ID=... OURA_CLIENT_SECRET=... TRANSPORT_TYPE=httpStream PORT=3000 npx -y oura-ring-mcp-server
 ```
 
 The MCP endpoint is served at `/mcp`; `somamcp` also exposes a public `GET /health` probe.

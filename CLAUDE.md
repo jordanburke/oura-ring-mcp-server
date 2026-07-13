@@ -43,8 +43,16 @@ Entry point `src/index.ts`:
 
 ### Source layout
 
-- `src/config.ts` — env → `OuraConfig` (Either). Auth is a PAT via `OURA_API_KEY`; `OURA_SANDBOX`
-  switches the base URL to Oura's `/sandbox/` demo data.
+- `src/config.ts` — env → `OuraConfig` (Either). Resolves an `AuthConfig`: `oauth` when
+  `OURA_CLIENT_ID`/`OURA_CLIENT_SECRET` are set (preferred), else `pat` via `OURA_API_KEY` (legacy
+  fallback — Oura stopped issuing new PATs in Dec 2025). `OURA_SANDBOX` switches the base URL to
+  Oura's `/sandbox/` demo data.
+- `src/oura/auth.ts` — `TokenProvider` abstraction producing the Bearer token. Static for PAT; for
+  OAuth, refreshes with single-flight + persist-before-use against a token store
+  (`~/.config/oura-ring-mcp/tokens.json`). Oura refresh tokens are single-use/rotating, so the store
+  is the source of truth — never the env. Also exports `exchangeAuthCode`/`writeTokenStore`.
+- `src/login.ts` — the `login` subcommand: browser consent → localhost one-shot callback (CSRF
+  `state`) → authorization-code exchange → writes the token store.
 - `src/oura/collections.ts` — the descriptor table: every collection's `kind`
   (`daily` | `datetime` | `listOnly` | `singleton`), whether it has a by-id route, and whether it
   supports `latest`. **Source of truth is Oura's OpenAPI spec** (`openapi-1.35.json`); update this
