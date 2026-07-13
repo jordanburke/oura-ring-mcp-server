@@ -4,7 +4,8 @@
       "command": "node",
       "args": ["dist/index.js"],
       "env": {
-        "OURA_API_KEY": "${OURA_RING_PAT}",
+        "OURA_CLIENT_ID": "${OURA_CLIENT_ID}",
+        "OURA_CLIENT_SECRET": "${OURA_CLIENT_SECRET}",
         "OURA_SANDBOX": "${OURA_SANDBOX:-false}"
       }
     }

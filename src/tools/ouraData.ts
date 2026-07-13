@@ -1,6 +1,7 @@
 import { UserError } from "somamcp"
 
 import type { OuraConfig } from "../config"
+import { createTokenProvider } from "../oura/auth"
 import { type RequestDeps, requestOura } from "../oura/client"
 import { COLLECTIONS } from "../oura/collections"
 import { type OuraDataParams, ouraDataParams } from "../oura/params"
@@ -23,22 +24,29 @@ ${collectionCatalogue}`
  * Build the consolidated `oura_data` tool bound to a resolved config.
  * `deps` is injectable so tests can supply a fake fetch and clock.
  */
-export const createOuraDataTool = (config: OuraConfig, deps: RequestDeps = {}) => ({
-  name: "oura_data",
-  description: DESCRIPTION,
-  parameters: ouraDataParams,
-  annotations: {
-    readOnlyHint: true,
-    openWorldHint: true,
-    title: "Oura Ring data",
-  },
-  execute: async (args: OuraDataParams) => {
-    const result = await requestOura(config, args, deps)
-    return result.fold(
-      (err) => {
-        throw new UserError(err.message)
-      },
-      (data) => JSON.stringify(data, null, 2),
-    )
-  },
-})
+export const createOuraDataTool = (config: OuraConfig, deps: RequestDeps = {}) => {
+  // Build the token provider once so OAuth token caching and single-flight refresh persist
+  // across tool calls (a fresh provider per request would re-load and risk double-refresh).
+  const tokenProvider = deps.tokenProvider ?? createTokenProvider(config.auth, deps)
+  const requestDeps: RequestDeps = { ...deps, tokenProvider }
+
+  return {
+    name: "oura_data",
+    description: DESCRIPTION,
+    parameters: ouraDataParams,
+    annotations: {
+      readOnlyHint: true,
+      openWorldHint: true,
+      title: "Oura Ring data",
+    },
+    execute: async (args: OuraDataParams) => {
+      const result = await requestOura(config, args, requestDeps)
+      return result.fold(
+        (err) => {
+          throw new UserError(err.message)
+        },
+        (data) => JSON.stringify(data, null, 2),
+      )
+    },
+  }
+}
