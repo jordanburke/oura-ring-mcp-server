@@ -45,17 +45,17 @@
   "dependencies": {
     "@loglayer/transport-pino": "^3.2.0",
     "dotenv": "^17.4.2",
-    "functype": "^1.6.1",
-    "functype-log": "^1.6.1",
+    "functype": "^1.6.2",
+    "functype-log": "^1.6.2",
     "loglayer": "^9.3.0",
     "pino": "^10.3.1",
     "somamcp": "^1.1.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^24.13.2",
+    "@types/node": "^24.13.3",
     "ts-builds": "^3.2.1",
-    "tsdown": "^0.22.3"
+    "tsdown": "^0.22.5"
   },
   "type": "module",
   "main": "./dist/index.js",
