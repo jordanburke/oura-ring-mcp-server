@@ -17,8 +17,15 @@
       },
       "environmentVariables": [
         {
-          "name": "OURA_API_KEY",
-          "description": "Oura personal access token (create at https://cloud.ouraring.com/personal-access-tokens)",
+          "name": "OURA_CLIENT_ID",
+          "description": "Oura OAuth2 client ID (register an app at https://cloud.ouraring.com/oauth/applications, then run `oura-ring-mcp-server login` once to authorize)",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "OURA_CLIENT_SECRET",
+          "description": "Oura OAuth2 client secret from the same application",
           "isRequired": true,
           "format": "string",
           "isSecret": true

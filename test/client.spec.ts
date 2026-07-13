@@ -1,11 +1,13 @@
+import { Right } from "functype"
 import { describe, expect, it, vi } from "vitest"
 
 import type { OuraConfig } from "../src/config"
-import { buildUrl, requestOura } from "../src/oura/client"
+import type { TokenProvider } from "../src/oura/auth"
+import { type OuraError, buildUrl, requestOura } from "../src/oura/client"
 import { ouraDataParams } from "../src/oura/params"
 
 const config: OuraConfig = {
-  apiKey: "test-token",
+  auth: { mode: "pat", apiKey: "test-token" },
   apiBase: "https://api.ouraring.com/v2/usercollection",
   sandbox: false,
   transportType: "stdio",
@@ -109,5 +111,65 @@ describe("requestOura", () => {
 
     expect(result.isLeft()).toBe(true)
     if (result.isLeft()) expect(result.value.kind).toBe("parse")
+  })
+
+  describe("OAuth 401 retry", () => {
+    const oauthConfig: OuraConfig = {
+      ...config,
+      auth: {
+        mode: "oauth",
+        clientId: "cid",
+        clientSecret: "secret",
+        tokenUrl: "https://api.ouraring.com/oauth/token",
+        authorizeUrl: "https://cloud.ouraring.com/oauth/authorize",
+        redirectUri: "http://localhost:8080/callback",
+        scopes: "daily heartrate personal",
+        tokenStorePath: "/tmp/t.json",
+      },
+    }
+
+    it("refreshes once and retries on a 401, then succeeds", async () => {
+      const payload = { data: [{ id: "1" }] }
+      const fetchFn = vi
+        .fn()
+        .mockResolvedValueOnce(new Response("{}", { status: 401 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify(payload), { status: 200 }))
+      const invalidate = vi.fn()
+      let call = 0
+      const tokenProvider: TokenProvider = {
+        getToken: vi.fn(() => Promise.resolve(Right<OuraError, string>(`tok-${++call}`))),
+        invalidate,
+      }
+
+      const result = await requestOura(oauthConfig, params({ collection: "daily_sleep" }), {
+        fetchFn,
+        now: NOW,
+        tokenProvider,
+      })
+
+      expect(invalidate).toHaveBeenCalledTimes(1)
+      expect(fetchFn).toHaveBeenCalledTimes(2)
+      expect(fetchFn.mock.calls[0][1].headers.Authorization).toBe("Bearer tok-1")
+      expect(fetchFn.mock.calls[1][1].headers.Authorization).toBe("Bearer tok-2")
+      expect(result.isRight()).toBe(true)
+      if (result.isRight()) expect(result.value).toEqual(payload)
+    })
+
+    it("reports an OAuth-flavored 401 message when the retry also fails", async () => {
+      const fetchFn = vi.fn().mockResolvedValue(new Response("{}", { status: 401 }))
+      const tokenProvider: TokenProvider = {
+        getToken: vi.fn(() => Promise.resolve(Right<OuraError, string>("tok"))),
+        invalidate: vi.fn(),
+      }
+
+      const result = await requestOura(oauthConfig, params({ collection: "daily_sleep" }), {
+        fetchFn,
+        now: NOW,
+        tokenProvider,
+      })
+
+      expect(result.isLeft()).toBe(true)
+      if (result.isLeft()) expect(result.value.message).toContain("re-authorize")
+    })
   })
 })

@@ -6,6 +6,8 @@ import { readFileSync } from "node:fs"
 import { createServer } from "somamcp"
 
 import { parseConfig } from "./config"
+import { runLogin } from "./login"
+import { createTokenProvider } from "./oura/auth"
 import { buildTelemetry } from "./telemetry"
 import { createOuraDataTool } from "./tools/ouraData"
 
@@ -30,6 +32,20 @@ const main = async (): Promise<void> => {
   }
   const config = configResult.value
 
+  // `oura-ring-mcp-server login` runs the one-time OAuth authorization flow, then exits.
+  if (process.argv[2] === "login") {
+    if (config.auth.mode !== "oauth") {
+      stderr("`login` requires OAuth mode. Set OURA_CLIENT_ID and OURA_CLIENT_SECRET, then retry.")
+      process.exit(1)
+    }
+    const result = await runLogin(config.auth)
+    if (result.isLeft()) {
+      stderr(result.value.message)
+      process.exit(1)
+    }
+    process.exit(0)
+  }
+
   const server = createServer({
     name: NAME,
     version: VERSION,
@@ -37,7 +53,18 @@ const main = async (): Promise<void> => {
     enableIntrospection: true,
   })
 
-  server.addTool(createOuraDataTool(config))
+  // One provider per process so OAuth token caching + single-flight refresh work across requests.
+  const tokenProvider = createTokenProvider(config.auth)
+  stderr(`auth mode: ${config.auth.mode}`)
+
+  // Warm up OAuth so a bad/expired refresh token surfaces at startup, not on the first tool call.
+  // Non-fatal: a transient network blip should not stop the server from starting.
+  if (config.auth.mode === "oauth") {
+    const warm = await tokenProvider.getToken()
+    if (warm.isLeft()) stderr(`warning: OAuth startup token fetch failed: ${warm.value.message}`)
+  }
+
+  server.addTool(createOuraDataTool(config, { tokenProvider }))
 
   if (config.transportType === "httpStream") {
     await server.start({

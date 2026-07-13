@@ -1,10 +1,11 @@
 import { Either, Left, tryCatchAsync } from "functype"
 
 import type { OuraConfig } from "../config"
+import { type AuthDeps, createTokenProvider, type TokenProvider } from "./auth"
 import { getCollection } from "./collections"
 import type { OuraDataParams } from "./params"
 
-export type OuraErrorKind = "network" | "http" | "parse" | "config"
+export type OuraErrorKind = "network" | "http" | "parse" | "config" | "auth"
 
 export type OuraError = {
   readonly kind: OuraErrorKind
@@ -15,10 +16,15 @@ export type OuraError = {
 
 export type FetchLike = typeof fetch
 
-export type RequestDeps = {
+export type RequestDeps = AuthDeps & {
   readonly fetchFn?: FetchLike
   /** Injectable clock so default date ranges are deterministic in tests. */
   readonly now?: Date
+  /**
+   * Bearer-token source. Created once per process in production so OAuth token caching and
+   * single-flight refresh work across requests. Omit and a provider is derived from `config.auth`.
+   */
+  readonly tokenProvider?: TokenProvider
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -27,13 +33,17 @@ const errMessage = (e: unknown): string => (e instanceof Error ? e.message : Str
 
 const fmtDate = (d: Date): string => d.toISOString().slice(0, 10)
 
-const httpMessage = (status: number, detail: unknown): string => {
+const httpMessage = (status: number, detail: unknown, authMode: "pat" | "oauth"): string => {
   const suffix = detail !== undefined && detail !== null ? ` ${JSON.stringify(detail)}` : ""
+  const auth401 =
+    authMode === "oauth"
+      ? "Oura authentication failed (401) even after refreshing. The refresh token may be revoked; re-authorize to obtain a fresh OURA_REFRESH_TOKEN."
+      : "Oura authentication failed (401). Verify OURA_API_KEY is a valid personal access token."
   switch (status) {
     case 400:
       return `Oura rejected the request as invalid (400).${suffix}`
     case 401:
-      return `Oura authentication failed (401). Verify OURA_API_KEY is a valid personal access token.${suffix}`
+      return `${auth401}${suffix}`
     case 403:
       return `Oura denied access (403). The token may lack the required scope for this collection.${suffix}`
     case 404:
@@ -109,24 +119,37 @@ export const requestOura = async (
   const doFetch = deps.fetchFn ?? fetch
   const now = deps.now ?? new Date()
   const url = buildUrl(config, params, now)
+  const provider = deps.tokenProvider ?? createTokenProvider(config.auth, deps)
 
-  const fetched = await tryCatchAsync<OuraError, Response>(
-    () =>
-      doFetch(url, {
-        headers: { Authorization: `Bearer ${config.apiKey}`, Accept: "application/json" },
-      }),
-    (e) => ({ kind: "network", message: `Network request to Oura failed: ${errMessage(e)}` }),
-  )
+  const attempt = (token: string): Promise<Either<OuraError, Response>> =>
+    tryCatchAsync<OuraError, Response>(
+      () => doFetch(url, { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }),
+      (e) => ({ kind: "network", message: `Network request to Oura failed: ${errMessage(e)}` }),
+    )
 
+  const token = await provider.getToken()
+  if (token.isLeft()) return Left<OuraError, unknown>(token.value)
+
+  let fetched = await attempt(token.value)
   if (fetched.isLeft()) return Left<OuraError, unknown>(fetched.value)
+  let res = fetched.value
 
-  const res = fetched.value
+  // An OAuth access token can expire between refresh and use; refresh once and retry on 401.
+  if (res.status === 401 && config.auth.mode === "oauth") {
+    provider.invalidate()
+    const retryToken = await provider.getToken()
+    if (retryToken.isLeft()) return Left<OuraError, unknown>(retryToken.value)
+    fetched = await attempt(retryToken.value)
+    if (fetched.isLeft()) return Left<OuraError, unknown>(fetched.value)
+    res = fetched.value
+  }
+
   if (!res.ok) {
     const detail = await safeBody(res)
     return Left<OuraError, unknown>({
       kind: "http",
       status: res.status,
-      message: httpMessage(res.status, detail),
+      message: httpMessage(res.status, detail, config.auth.mode),
       detail,
     })
   }
